@@ -3,38 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Управление Компьютером</title>
+    <title>Пульт Управления Вторым Экраном</title>
     <style>
         body { margin: 0; background: #1a1a1a; color: white; font-family: Arial, sans-serif; text-align: center; }
-        #screen-container { width: 100vw; max-height: 60vh; background: black; overflow: hidden; display: flex; justify-content: center; position: relative; }
-        #screen { width: 100%; height: auto; object-fit: contain; cursor: crosshair; }
+        #screen-container { width: 100vw; max-height: 50vh; background: black; overflow: hidden; display: flex; justify-content: center; }
+        #screen { width: 100%; height: auto; object-fit: contain; }
         .row { display: flex; justify-content: center; gap: 5px; margin: 8px 3px; flex-wrap: wrap; }
         button { background: #333; color: white; border: 1px solid #555; padding: 10px 15px; font-size: 14px; border-radius: 5px; min-width: 50px; touch-action: manipulation; }
         button:active { background: #007bff; }
-        .mouse-btn { background: #007bff; font-weight: bold; flex: 1; padding: 15px; max-width: 120px; }
-        .toggle-btn { background: #28a745; font-weight: bold; padding: 15px; }
+        .mouse-btn { background: #007bff; font-weight: bold; flex: 1; padding: 15px; max-width: 150px; }
         input { background: #222; color: white; border: 1px solid #555; padding: 10px; width: 70%; border-radius: 5px; font-size: 16px; }
-        .info-tag { font-size: 12px; color: #888; margin-top: 5px; }
     </style>
 </head>
 <body>
 
     <div id="screen-container">
-        <img id="screen" src="" alt="Ожидание ввода номера компьютера...">
+        <img id="screen" src="" alt="Ожидание ввода номера...">
     </div>
-    <div class="info-tag">Если зашли с ноута: можно просто кликать по экрану и нажимать клавиши на своей клавиатуре!</div>
 
+    <!-- МЫШЬ -->
     <div class="row">
         <button class="mouse-btn" onclick="sendCmd('click', 'left')">ЛКМ</button>
         <button class="mouse-btn" onclick="sendCmd('click', 'right')">ПКМ</button>
-        <button class="toggle-btn" id="monitor-btn" onclick="toggleMonitor()">Экран: 1</button>
     </div>
 
+    <!-- ТЕКСТ -->
     <div class="row">
-        <input type="text" id="text-input" placeholder="Для мобильных: введите текст...">
+        <input type="text" id="text-input" placeholder="Введите текст...">
         <button onclick="sendText()">Отправить</button>
     </div>
 
+    <!-- КЛАВИШИ -->
     <div class="row">
         <button onclick="sendCmd('key', 'enter')">Enter</button>
         <button onclick="sendCmd('key', 'backspace')">← Стереть</button>
@@ -46,42 +45,33 @@
 
     <script>
         let serverUrl = "";
-        let currentMonitor = 1;
-
-        const laptopNumber = prompt("Введите Номер Компьютера (4 цифры):");
+        const laptopNumber = prompt("Введите Номер Компьютера:", "7777");
 
         fetch(`https://keyvalue.xyz{laptopNumber}/ip`)
             .then(res => res.text())
             .then(ip => {
                 if (!ip || ip.includes("Error")) {
-                    alert("Компьютер с таким номером не найден!");
+                    alert("Ноутбук не найден!");
                     return;
                 }
                 serverUrl = `http://${ip.trim()}:5000`;
                 updateScreen();
             })
-            .catch(err => alert("Ошибка сети!"));
+            .catch(err => alert("Ошибка подключения к облаку!"));
 
         const screenImg = document.getElementById('screen');
         function updateScreen() {
             if (!serverUrl) return;
-            screenImg.src = `${serverUrl}/screenshot?monitor=${currentMonitor}&t=${Date.now()}`;
+            screenImg.src = `${serverUrl}/screenshot?t=${Date.now()}`;
         }
-        screenImg.onload = () => setTimeout(updateScreen, 30);
+        screenImg.onload = () => setTimeout(updateScreen, 40);
         screenImg.onerror = () => setTimeout(updateScreen, 1000);
-
-        // Переключение экранов
-        function toggleMonitor() {
-            currentMonitor = currentMonitor === 1 ? 2 : 1;
-            document.getElementById('monitor-btn').innerText = `Экран: ${currentMonitor}`;
-            updateScreen();
-        }
 
         screenImg.addEventListener('click', (e) => {
             const rect = screenImg.getBoundingClientRect();
             const x = (e.clientX - rect.left) / rect.width;
             const y = (e.clientY - rect.top) / rect.height;
-            sendCmd('mouse_click', { rx: x, ry: y, monitor: currentMonitor });
+            sendCmd('mouse_click', { rx: x, ry: y });
         });
 
         function sendCmd(type, data) {
@@ -108,19 +98,6 @@
             btn.onclick = () => sendCmd('key', `f${i}`);
             fContainer.appendChild(btn);
         }
-
-        // Ловим клавиши с клавиатуры другого ноута
-        document.addEventListener('keydown', (e) => {
-            if (document.activeElement === document.getElementById('text-input')) return;
-            e.preventDefault();
-            let key = e.key.toLowerCase();
-            if (key === ' ') key = 'space';
-            if (key === 'arrowup') key = 'up';
-            if (key === 'arrowdown') key = 'down';
-            if (key === 'arrowleft') key = 'left';
-            if (key === 'arrowright') key = 'right';
-            sendCmd('key', key);
-        });
     </script>
 </body>
 </html>
